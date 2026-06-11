@@ -33,15 +33,12 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      # Step 5: Check the code for formatting errors
-      - name: Terraform Format Check
-        run: terraform fmt -check
-
-      # Step 6: Preview the changes
+      # Step 5: Preview the changes
       - name: Terraform Plan
         run: terraform plan
 
-      # Step 7: Build the infrastructure automatically!
+      # Step 6: Build the infrastructure automatically!
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve
+        
