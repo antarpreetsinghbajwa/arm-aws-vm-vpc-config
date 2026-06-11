@@ -1,0 +1,40 @@
+name: "Azure Terraform CI/CD Pipeline"
+
+# Trigger the pipeline manually via the "Run workflow" button in GitHub Actions
+on:
+  workflow_dispatch:
+
+jobs:
+  azure-infrastructure:
+    name: "Deploy Azure Infrastructure"
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Download your repository code onto the GitHub runner
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Log into Azure securely using your AZURE_CREDENTIALS secret
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Step 3: Install the latest version of Terraform on the runner
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Step 4: Initialize Terraform inside your dedicated azure folder
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./azure-infrastructure
+
+      # Step 5: Preview the changes to make sure everything is structurally sound
+      - name: Terraform Plan
+        run: terraform plan
+        working-directory: ./azure-infrastructure
+
+      # Step 6: Build the infrastructure automatically!
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+        working-directory: ./azure-infrastructure
