@@ -1,10 +1,13 @@
 name: "Terraform CI/CD Pipeline"
 
-# Trigger the pipeline when code is pushed to the main branch
-# or when you manually click the "Run workflow" button
+# Trigger the pipeline when code is pushed to the main branch,
+# BUT ignore any changes made to Azure files or the Azure pipeline.
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - 'azure-infrastructure/**'
+      - '.github/workflows/azure-deploy.yml'
   workflow_dispatch:
 
 jobs:
@@ -13,11 +16,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Download your repository code onto the GitHub server
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Step 2: Authenticate with AWS securely using GitHub Secrets
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -25,19 +26,15 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # Step 3: Install the latest version of Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # Step 4: Initialize Terraform (Downloads providers)
       - name: Terraform Init
         run: terraform init
 
-      # Step 5: Preview the changes
       - name: Terraform Plan
         run: terraform plan
 
-      # Step 6: Build the infrastructure automatically!
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: terraform apply -auto-approve
