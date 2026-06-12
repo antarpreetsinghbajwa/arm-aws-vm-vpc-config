@@ -1,40 +1,41 @@
-# ==============================================================================
-# BLOCK 1: AZURE PROVIDER CONFIGURATION
-# ==============================================================================
+# 1. Terraform Configuration and Remote Cloud Backend
 terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 3.0" # Using the stable 3.x Azure provider
+      version = "~> 3.0"
     }
+  }
+
+  # This locks your state file securely into your new Azure Storage Account
+  backend "azurerm" {
+    resource_group_name  = "p46-terraform-state-rg"
+    storage_account_name = "p46aztfstate9988"
+    container_name       = "tfstate"
+    key                  = "terraform.tfstate"
   }
 }
 
-# Tells Terraform to use your active 'az login' credentials
+# 2. Configure the Microsoft Azure Provider
 provider "azurerm" {
   features {}
 }
 
-# ==============================================================================
-# BLOCK 2: THE RESOURCE GROUP (The Container)
-# ==============================================================================
-# In Azure, every single resource must belong to a Resource Group. 
-# If you delete the Resource Group, it deletes everything inside it automatically.
+# 3. Create a Logical Resource Group Container
 resource "azurerm_resource_group" "p46_rg" {
   name     = "p46-azure-range"
-  location = "East US" # Deploying to Virginia to stay close to your AWS servers
+  location = "eastus"
 }
 
-# ==============================================================================
-# BLOCK 3: AZURE VIRTUAL NETWORK (VNet) & SUBNET
-# ==============================================================================
+# 4. Create the Virtual Network (VNet)
 resource "azurerm_virtual_network" "vnet" {
   name                = "p46-azure-vnet"
-  address_space       = ["10.1.0.0/16"] # Notice this is 10.1.x.x so it doesn't overlap with AWS (10.0.x.x)
+  address_space       = ["10.1.0.0/16"]
   location            = azurerm_resource_group.p46_rg.location
   resource_group_name = azurerm_resource_group.p46_rg.name
 }
 
+# 5. Create an Isolated Subnet inside the VNet
 resource "azurerm_subnet" "subnet" {
   name                 = "p46-azure-subnet"
   resource_group_name  = azurerm_resource_group.p46_rg.name
@@ -42,10 +43,15 @@ resource "azurerm_subnet" "subnet" {
   address_prefixes     = ["10.1.1.0/24"]
 }
 
-# ==============================================================================
-# BLOCK 4: NETWORK INTERFACE CARD (NIC)
-# ==============================================================================
-# Azure requires you to build the "network card" separately before attaching it to a VM.
+# 6. Create a Public IP Address for Remote Access
+resource "azurerm_public_ip" "public_ip" {
+  name                = "p46-azure-pip"
+  location            = azurerm_resource_group.p46_rg.location
+  resource_group_name = azurerm_resource_group.p46_rg.name
+  allocation_method   = "Dynamic"
+}
+
+# 7. Create the Network Interface Card (NIC)
 resource "azurerm_network_interface" "nic" {
   name                = "p46-azure-nic01"
   location            = azurerm_resource_group.p46_rg.location
@@ -55,22 +61,18 @@ resource "azurerm_network_interface" "nic" {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.subnet.id
     private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.public_ip.id
   }
 }
 
-# ==============================================================================
-# BLOCK 5: WINDOWS VIRTUAL MACHINE PROVISIONING
-# ==============================================================================
+# 8. Create the Windows Server 2022 Virtual Machine
 resource "azurerm_windows_virtual_machine" "vm" {
-  name                = "p46-az-dc03" # Naming this DC03 to act as an Azure backup controller later
-  resource_group_name = azurerm_resource_group.p46_rg.name
-  location            = azurerm_resource_group.p46_rg.location
-  size                = "Standard_D2s_v3" # 2 vCPUs, 4GB RAM (Cost-effective Azure size)
-  
-  # Azure requires a username and complex password to deploy Windows
-  admin_username      = "p46admin"
-  admin_password      = "P@ssw0rd1234_Azure!" # (For training only. In production, this goes in a secure variable)
-  
+  name                  = "p46-az-dc03"
+  resource_group_name   = azurerm_resource_group.p46_rg.name
+  location              = azurerm_resource_group.p46_rg.location
+  size                  = "Standard_D2s_v3"
+  admin_username        = "adminuser"
+  admin_password        = "P@ssw0rd12345!"
   network_interface_ids = [
     azurerm_network_interface.nic.id,
   ]
