@@ -47,13 +47,31 @@ resource "azurerm_public_ip" "public_ip" {
   name                = "p46-azure-pip"
   location            = azurerm_resource_group.p46_rg.location
   resource_group_name = azurerm_resource_group.p46_rg.name
-  
-  # UPDATED: Changed to Standard SKU and Static allocation to bypass retirement limits
   sku                 = "Standard"
   allocation_method   = "Static"
 }
 
-# 7. Create the Network Interface Card (NIC)
+# 7. Create a Network Security Group (Firewall)
+resource "azurerm_network_security_group" "nsg" {
+  name                = "p46-azure-nsg"
+  location            = azurerm_resource_group.p46_rg.location
+  resource_group_name = azurerm_resource_group.p46_rg.name
+
+  # Security Rule to allow Remote Desktop Protocol (RDP)
+  security_rule {
+    name                       = "Allow-RDP"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "3389"
+    source_address_prefix      = "*" # Note: Allows any IP for lab purposes
+    destination_address_prefix = "*"
+  }
+}
+
+# 8. Create the Network Interface Card (NIC)
 resource "azurerm_network_interface" "nic" {
   name                = "p46-azure-nic01"
   location            = azurerm_resource_group.p46_rg.location
@@ -67,7 +85,13 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
-# 8. Create the Windows Server 2022 Virtual Machine
+# 9. Associate the Firewall with the Network Interface
+resource "azurerm_network_interface_security_group_association" "nsg_association" {
+  network_interface_id      = azurerm_network_interface.nic.id
+  network_security_group_id = azurerm_network_security_group.nsg.id
+}
+
+# 10. Create the Windows Server 2022 Virtual Machine
 resource "azurerm_windows_virtual_machine" "vm" {
   name                  = "p46-az-dc03"
   resource_group_name   = azurerm_resource_group.p46_rg.name
@@ -90,4 +114,10 @@ resource "azurerm_windows_virtual_machine" "vm" {
     sku       = "2022-Datacenter"
     version   = "latest"
   }
+}
+
+# 11. Output the Public IP Address
+output "windows_server_public_ip" {
+  description = "The public IP address to use for Remote Desktop (RDP)"
+  value       = azurerm_public_ip.public_ip.ip_address
 }
