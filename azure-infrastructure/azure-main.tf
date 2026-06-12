@@ -7,7 +7,6 @@ terraform {
     }
   }
 
-  # This locks your state file securely into your new Azure Storage Account
   backend "azurerm" {
     resource_group_name  = "p46-terraform-state-rg"
     storage_account_name = "p46aztfstate9988"
@@ -48,7 +47,10 @@ resource "azurerm_public_ip" "public_ip" {
   name                = "p46-azure-pip"
   location            = azurerm_resource_group.p46_rg.location
   resource_group_name = azurerm_resource_group.p46_rg.name
-  allocation_method   = "Dynamic"
+  
+  # UPDATED: Changed to Standard SKU and Static allocation to bypass retirement limits
+  sku                 = "Standard"
+  allocation_method   = "Static"
 }
 
 # 7. Create the Network Interface Card (NIC)
