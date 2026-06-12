@@ -65,7 +65,7 @@ resource "azurerm_windows_virtual_machine" "vm" {
   name                = "p46-az-dc03" # Naming this DC03 to act as an Azure backup controller later
   resource_group_name = azurerm_resource_group.p46_rg.name
   location            = azurerm_resource_group.p46_rg.location
-  size                = "Standard_B2s" # 2 vCPUs, 4GB RAM (Cost-effective Azure size)
+  size                = "Standard_D2s_v3" # 2 vCPUs, 4GB RAM (Cost-effective Azure size)
   
   # Azure requires a username and complex password to deploy Windows
   admin_username      = "p46admin"
