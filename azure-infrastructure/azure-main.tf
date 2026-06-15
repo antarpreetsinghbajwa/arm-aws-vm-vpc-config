@@ -66,7 +66,7 @@ resource "azurerm_network_security_group" "nsg" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "3389"
-    source_address_prefix      = "*" # Note: Allows any IP for lab purposes
+    source_address_prefix      = "*" 
     destination_address_prefix = "*"
   }
 }
@@ -92,3 +92,80 @@ resource "azurerm_network_interface_security_group_association" "nsg_association
 }
 
 # 10. Create the Windows Server 2022 Virtual Machine
+resource "azurerm_windows_virtual_machine" "vm" {
+  name                  = "p46-az-dc03"
+  resource_group_name   = azurerm_resource_group.p46_rg.name
+  location              = azurerm_resource_group.p46_rg.location
+  size                  = "Standard_D2s_v3"
+  admin_username        = "adminuser"
+  admin_password        = "P@ssw0rd12345!"
+  network_interface_ids = [
+    azurerm_network_interface.nic.id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2022-Datacenter"
+    version   = "latest"
+  }
+}
+
+# 11. Output the Public IP Address
+output "windows_server_public_ip" {
+  description = "The public IP address to use for Remote Desktop (RDP)"
+  value       = azurerm_public_ip.public_ip.ip_address
+}
+
+# ==============================================================================
+# BLOCK 4: AZURE VPN GATEWAY INFRASTRUCTURE
+# ==============================================================================
+
+# 12. Create the Gateway Subnet (Azure REQUIRES it to be named exactly "GatewaySubnet")
+resource "azurerm_subnet" "gateway_subnet" {
+  name                 = "GatewaySubnet"
+  resource_group_name  = azurerm_resource_group.p46_rg.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["10.1.254.0/24"]
+}
+
+# 13. Create a Public IP for the Azure VPN Gateway
+resource "azurerm_public_ip" "vpn_gw_pip" {
+  name                = "p46-azure-vpn-pip"
+  location            = azurerm_resource_group.p46_rg.location
+  resource_group_name = azurerm_resource_group.p46_rg.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+}
+
+# 14. Create the Azure Virtual Network Gateway (The Border Router)
+resource "azurerm_virtual_network_gateway" "vpn_gw" {
+  name                = "p46-azure-vpngw"
+  location            = azurerm_resource_group.p46_rg.location
+  resource_group_name = azurerm_resource_group.p46_rg.name
+
+  type     = "Vpn"
+  vpn_type = "RouteBased"
+
+  active_active = false
+  enable_bgp    = false
+  sku           = "VpnGw1" # Standard Generation 1 Gateway
+
+  ip_configuration {
+    name                          = "vnetGatewayConfig"
+    public_ip_address_id          = azurerm_public_ip.vpn_gw_pip.id
+    private_ip_address_allocation = "Dynamic"
+    subnet_id                     = azurerm_subnet.gateway_subnet.id
+  }
+}
+
+# 15. Output the new Azure VPN Public IP so we can give it to AWS later
+output "azure_vpn_public_ip" {
+  description = "The Public IP of the Azure Virtual Network Gateway"
+  value       = azurerm_public_ip.vpn_gw_pip.ip_address
+}
