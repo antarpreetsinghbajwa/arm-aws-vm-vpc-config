@@ -154,7 +154,7 @@ resource "azurerm_virtual_network_gateway" "vpn_gw" {
 
   active_active = false
   enable_bgp    = false
-  sku           = "VpnGw1" # Standard Generation 1 Gateway
+  sku           = "VpnGw1AZ" # Upgraded to compliance-required AZ SKU
 
   ip_configuration {
     name                          = "vnetGatewayConfig"
