@@ -90,12 +90,12 @@ resource "aws_security_group" "internal_lan" {
   }
 
   # Inbound Security Rules: Allows completely unhindered communication BETWEEN 
-  # servers inside our private network fence so they can replicate AD information.
+  # servers inside our private network fence AND our new Azure extension!
   ingress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1" # Allows all protocols internally
-    cidr_blocks = ["10.0.0.0/16"] 
+    cidr_blocks = ["10.0.0.0/16", "10.1.0.0/16"] # <-- AZURE ADDED HERE!
   }
 
   # Outbound Security Rules: Allows your servers to talk out to the public internet
