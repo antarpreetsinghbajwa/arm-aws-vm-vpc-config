@@ -107,3 +107,55 @@ resource "aws_security_group" "internal_lan" {
     cidr_blocks = ["0.0.0.0/0"] # Anywhere on the internet
   }
 }
+# ==============================================================================
+# BLOCK 4: AWS SITE-TO-SITE VPN INFRASTRUCTURE
+# ==============================================================================
+
+# 1. Create the AWS Virtual Private Gateway (VGW) - The AWS Border Router
+resource "aws_vpn_gateway" "vpn_gw" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "p46-aws-vpngw"
+  }
+}
+
+# 2. Attach the VGW to the VPC's main Route Table
+# This tells the AWS network: "If you need to reach Azure (10.1.x.x), go to the VGW"
+resource "aws_route" "vpn_route" {
+  route_table_id         = aws_route_table.public_rt.id
+  destination_cidr_block = "10.1.0.0/16" # Azure's VNet IP space
+  gateway_id             = aws_vpn_gateway.vpn_gw.id
+}
+
+# 3. Create the Customer Gateway (CGW) - Represents Azure inside AWS
+resource "aws_customer_gateway" "azure_cgw" {
+  bgp_asn    = 65000
+  ip_address = "40.121.127.56" # The Public IP from Azure we just waited for!
+  type       = "ipsec.1"
+
+  tags = {
+    Name = "p46-azure-cgw"
+  }
+}
+
+# 4. Create the IPsec VPN Tunnel Connection
+resource "aws_vpn_connection" "main" {
+  vpn_gateway_id      = aws_vpn_gateway.vpn_gw.id
+  customer_gateway_id = aws_customer_gateway.azure_cgw.id
+  type                = "ipsec.1"
+  static_routes_only  = true # We will use static routing for this hybrid lab
+
+  # Provide the highly secure pre-shared key (password) for Tunnel 1
+  tunnel1_preshared_key = "P46HybridCloudSecureTunnel2026!"
+
+  tags = {
+    Name = "p46-aws-to-azure-vpn"
+  }
+}
+
+# 5. Define the Static Route inside the VPN Connection
+resource "aws_vpn_connection_route" "azure_network" {
+  destination_cidr_block = "10.1.0.0/16"
+  vpn_connection_id      = aws_vpn_connection.main.id
+}
