@@ -1,40 +1,54 @@
-name: "Azure Terraform CI/CD Pipeline"
+name: 'Azure Terraform CI/CD Pipeline'
 
-# Trigger the pipeline manually via the "Run workflow" button in GitHub Actions
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    # This ensures the pipeline ONLY runs if a file inside this folder changes
+    paths:
+      - 'azure-infrastructure/**'
+  workflow_dispatch: # Allows you to still trigger it manually via the UI button
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
-  azure-infrastructure:
-    name: "Deploy Azure Infrastructure"
+  terraform:
+    name: 'Azure Terraform Deploy'
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Download your repository code onto the GitHub runner
-      - name: Checkout Code
-        uses: actions/checkout@v4
+    # Step 1: Check out the repository code
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-      # Step 2: Log into Azure securely using your AZURE_CREDENTIALS secret
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+    # Step 2: Log in to Azure using GitHub Secrets / OIDC
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Step 3: Install the latest version of Terraform on the runner
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+    # Step 3: Setup Terraform on the GitHub Runner
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_wrapper: false
 
-      # Step 4: Initialize Terraform inside your dedicated azure folder
-      - name: Terraform Init
-        run: terraform init
-        working-directory: ./azure-infrastructure
+    # Step 4: Initialize Terraform with the Cloud Backend
+    - name: Terraform Init
+      run: |
+        cd azure-infrastructure
+        terraform init
 
-      # Step 5: Preview the changes to make sure everything is structurally sound
-      - name: Terraform Plan
-        run: terraform plan
-        working-directory: ./azure-infrastructure
+    # Step 5: Generate a deployment plan
+    - name: Terraform Plan
+      run: |
+        cd azure-infrastructure
+        terraform plan
 
-      # Step 6: Build the infrastructure automatically!
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-        working-directory: ./azure-infrastructure
+    # Step 6: Apply changes and deploy the infrastructure
+    - name: Terraform Apply
+      run: |
+        cd azure-infrastructure
+        terraform apply -auto-approve
