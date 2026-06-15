@@ -170,3 +170,24 @@ output "azure_vpn_public_ip" {
   description = "The Public IP of the Azure Virtual Network Gateway"
   value       = azurerm_public_ip.vpn_gw_pip.ip_address
 }
+# 16. Create the Local Network Gateway (Represents AWS inside Azure)
+resource "azurerm_local_network_gateway" "aws_lng" {
+  name                = "p46-aws-localgw"
+  resource_group_name = azurerm_resource_group.p46_rg.name
+  location            = azurerm_resource_group.p46_rg.location
+  gateway_address     = "3.219.249.23" # The AWS Tunnel 1 Public IP!
+  address_space       = ["10.0.0.0/16"] # The AWS VPC network range
+}
+
+# 17. Create the Site-to-Site VPN Connection (Locks the tunnel together)
+resource "azurerm_virtual_network_gateway_connection" "aws_connection" {
+  name                = "p46-azure-to-aws-vpn"
+  location            = azurerm_resource_group.p46_rg.location
+  resource_group_name = azurerm_resource_group.p46_rg.name
+
+  type                       = "IPsec"
+  virtual_network_gateway_id = azurerm_virtual_network_gateway.vpn_gw.id
+  local_network_gateway_id   = azurerm_local_network_gateway.aws_lng.id
+
+  shared_key = "P46_HybridCloud_Tunnel_2026" # The exact same password we used in AWS!
+}
