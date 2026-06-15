@@ -107,6 +107,7 @@ resource "aws_security_group" "internal_lan" {
     cidr_blocks = ["0.0.0.0/0"] # Anywhere on the internet
   }
 }
+
 # ==============================================================================
 # BLOCK 4: AWS SITE-TO-SITE VPN INFRASTRUCTURE
 # ==============================================================================
@@ -147,7 +148,7 @@ resource "aws_vpn_connection" "main" {
   static_routes_only  = true # We will use static routing for this hybrid lab
 
   # Provide the highly secure pre-shared key (password) for Tunnel 1
-  tunnel1_preshared_key = "P46HybridCloudSecureTunnel2026!"
+  tunnel1_preshared_key = "P46_HybridCloud_Tunnel_2026" # Fixed to meet AWS character constraints
 
   tags = {
     Name = "p46-aws-to-azure-vpn"
