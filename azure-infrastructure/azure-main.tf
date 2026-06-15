@@ -92,32 +92,3 @@ resource "azurerm_network_interface_security_group_association" "nsg_association
 }
 
 # 10. Create the Windows Server 2022 Virtual Machine
-resource "azurerm_windows_virtual_machine" "vm" {
-  name                  = "p46-az-dc03"
-  resource_group_name   = azurerm_resource_group.p46_rg.name
-  location              = azurerm_resource_group.p46_rg.location
-  size                  = "Standard_D2s_v3"
-  admin_username        = "adminuser"
-  admin_password        = "P@ssw0rd12345!"
-  network_interface_ids = [
-    azurerm_network_interface.nic.id,
-  ]
-
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-  }
-
-  source_image_reference {
-    publisher = "MicrosoftWindowsServer"
-    offer     = "WindowsServer"
-    sku       = "2022-Datacenter"
-    version   = "latest"
-  }
-}
-
-# 11. Output the Public IP Address
-output "windows_server_public_ip" {
-  description = "The public IP address to use for Remote Desktop (RDP)"
-  value       = azurerm_public_ip.public_ip.ip_address
-}
