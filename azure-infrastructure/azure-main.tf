@@ -134,13 +134,14 @@ resource "azurerm_subnet" "gateway_subnet" {
   address_prefixes     = ["10.1.254.0/24"]
 }
 
-# 13. Create a Public IP for the Azure VPN Gateway
+# 13. Create a Public IP for the Azure VPN Gateway (With required availability zones)
 resource "azurerm_public_ip" "vpn_gw_pip" {
   name                = "p46-azure-vpn-pip"
   location            = azurerm_resource_group.p46_rg.location
   resource_group_name = azurerm_resource_group.p46_rg.name
   allocation_method   = "Static"
   sku                 = "Standard"
+  zones               = ["1", "2", "3"] # Fixed: Configures IP for use with AZ Gateways
 }
 
 # 14. Create the Azure Virtual Network Gateway (The Border Router)
@@ -154,7 +155,7 @@ resource "azurerm_virtual_network_gateway" "vpn_gw" {
 
   active_active = false
   enable_bgp    = false
-  sku           = "VpnGw1AZ" # Upgraded to compliance-required AZ SKU
+  sku           = "VpnGw1AZ" 
 
   ip_configuration {
     name                          = "vnetGatewayConfig"
