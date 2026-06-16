@@ -69,6 +69,19 @@ resource "azurerm_network_security_group" "nsg" {
     source_address_prefix      = "*" 
     destination_address_prefix = "*"
   }
+
+  # NEW RULE: Allow ALL traffic across the VPN from the AWS Network
+  security_rule {
+    name                       = "Allow_AWS_Inbound"
+    priority                   = 110
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "10.0.0.0/16" # Your AWS Network
+    destination_address_prefix = "*"
+  }
 }
 
 # 8. Create the Network Interface Card (NIC)
@@ -141,7 +154,7 @@ resource "azurerm_public_ip" "vpn_gw_pip" {
   resource_group_name = azurerm_resource_group.p46_rg.name
   allocation_method   = "Static"
   sku                 = "Standard"
-  zones               = ["1", "2", "3"] # Fixed: Configures IP for use with AZ Gateways
+  zones               = ["1", "2", "3"]
 }
 
 # 14. Create the Azure Virtual Network Gateway (The Border Router)
@@ -170,6 +183,7 @@ output "azure_vpn_public_ip" {
   description = "The Public IP of the Azure Virtual Network Gateway"
   value       = azurerm_public_ip.vpn_gw_pip.ip_address
 }
+
 # 16. Create the Local Network Gateway (Represents AWS inside Azure)
 resource "azurerm_local_network_gateway" "aws_lng" {
   name                = "p46-aws-localgw"
@@ -189,5 +203,5 @@ resource "azurerm_virtual_network_gateway_connection" "aws_connection" {
   virtual_network_gateway_id = azurerm_virtual_network_gateway.vpn_gw.id
   local_network_gateway_id   = azurerm_local_network_gateway.aws_lng.id
 
-  shared_key = "P46_HybridCloud_Tunnel_2026" # The exact same password we used in AWS!
+  shared_key = "P46_HybridCloud_Tunnel_2026" # The exact same password used in AWS!
 }
